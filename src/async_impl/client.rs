@@ -178,12 +178,18 @@ impl ClientBuilder {
                 headers.get(USER_AGENT).cloned()
             }
 
-            let http = match config.trust_dns {
+            let mut http = match config.trust_dns {
                 false => HttpConnector::new_gai(),
                 #[cfg(feature = "trust-dns")]
                 true => HttpConnector::new_trust_dns()?,
                 #[cfg(not(feature = "trust-dns"))]
                 true => unreachable!("trust-dns shouldn't be enabled unless the feature is"),
+            };
+
+            match http {
+                HttpConnector::Gai(ref mut inner) => { inner.set_reuse_address(true); },
+                #[cfg(feature = "trust-dns")]
+                HttpConnector::TrustDns(ref mut inner) => { inner.set_reuse_address(true); },
             };
 
             #[cfg(feature = "__tls")]
